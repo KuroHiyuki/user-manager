@@ -3,7 +3,7 @@ services:
     build: ./backend
     restart: unless-stopped
     # ports:
-    #   - "3000:3000" - chỉ mở port backend ra ngoài container khi cần
+    #   - "3000:3000" 
     volumes:
       - user-data:/data
     healthcheck:
