@@ -1,0 +1,23 @@
+services:
+  backend:
+    image: ${IMAGE_PREFIX}-backend:${TAG:-latest}
+    restart: unless-stopped
+    volumes:
+      - user-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    image: ${IMAGE_PREFIX}-frontend:${TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  user-data:

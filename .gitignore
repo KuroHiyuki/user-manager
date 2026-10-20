@@ -4,3 +4,5 @@ data
 .env
 .data
 dist
+*.pub
+*_key
