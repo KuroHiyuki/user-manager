@@ -68,7 +68,7 @@ jobs:
                   cache-to: type=gha,mode=max,scope=${{ matrix.service }}
     deploy:
         needs: publish
-        if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+        if: ${{ vars.DEPLOY_GCP_ENABLED == 'true' }}
         runs-on: ubuntu-latest
         environment: production
         steps:
@@ -103,3 +103,46 @@ jobs:
                         echo "Đã rollback về $PREV"
                       fi
                       exit 1
+    deploy-home:
+        needs: publish
+        if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+        runs-on: [self-hosted, home]
+        environment: production
+        permissions:
+            contents: read
+            packages: read
+        steps:
+            - uses: actions/checkout@v4
+            - name: Đặt IMAGE_PREFIX bằng chữ thường
+              run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+            - uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Deploy và kiểm tra health
+              run: |
+                  set -e
+                  COMPOSE="docker compose -p user-manager -f docker-compose.prod.yml"
+                  PREV=$(cat ~/.last_good_tag 2>/dev/null || true)
+                  export TAG=${{ github.sha }}
+
+                  $COMPOSE pull
+                  $COMPOSE up -d --remove-orphans || echo "compose up báo lỗi, kiểm tra health"
+
+                  for i in $(seq 1 15); do
+                    if curl -fsS http://localhost/api/health > /dev/null; then
+                      echo "$TAG" > ~/.last_good_tag
+                      echo "Deploy OK: $TAG"
+                      exit 0
+                    fi
+                    sleep 2
+                  done
+
+                  echo "Health check lỗi"
+                  if [ -n "$PREV" ]; then
+                    export TAG=$PREV
+                    $COMPOSE up -d
+                    echo "Đã rollback về $PREV"
+                  fi
+                  exit 1
