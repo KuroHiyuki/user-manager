@@ -68,7 +68,7 @@ jobs:
                   cache-to: type=gha,mode=max,scope=${{ matrix.service }}
     deploy:
         needs: publish
-        if: ${{ vars.DEPLOY_GCP_ENABLED == 'true' }}
+        if: ${{ vars.DEPLOY_AWS_ENABLED == 'true' }}
         runs-on: ubuntu-latest
         environment: production
         steps:
